@@ -1,0 +1,19 @@
+[tool.ruff]
+target-version = "py314"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+  "COM812", # Conflicts with Ruff formatter output.
+  "CPY001", # This local test harness has no copyright header policy.
+  "D203",   # Incompatible with the selected D213 convention.
+  "D213",   # Incompatible with the selected D203 convention.
+  "S603",   # Subprocesses are the explicitly scoped helper-test boundary.
+  "T201",   # Test protocol, latency, and RSS results are stdout contracts.
+]
+
+[tool.pyright]
+include = ["tests"]
+pythonVersion = "3.14"
+typeCheckingMode = "strict"

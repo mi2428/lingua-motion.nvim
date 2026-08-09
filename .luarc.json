@@ -1,0 +1,9 @@
+{
+  "runtime": {
+    "version": "LuaJIT"
+  },
+  "workspace": {
+    "checkThirdParty": false,
+    "library": ["$VIMRUNTIME", "$LUA_LS_META/LuaJIT zh-cn utf8"]
+  }
+}
