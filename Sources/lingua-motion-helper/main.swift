@@ -197,8 +197,12 @@ private func enumerateAppleSpans(in text: String, using tokenizer: NLTokenizer) 
   var appleSpans: [TokenSpan] = []
   var hasValidByteRanges = true
   tokenizer.enumerateTokens(in: text.startIndex..<text.endIndex) { range, attributes in
-    guard let startByte = utf8Offset(of: range.lowerBound, in: text),
-      let endByte = utf8Offset(of: range.upperBound, in: text)
+    let graphemeRange = (text as NSString).rangeOfComposedCharacterSequences(
+      for: NSRange(range, in: text)
+    )
+    guard let normalizedRange = Range(graphemeRange, in: text),
+      let startByte = utf8Offset(of: normalizedRange.lowerBound, in: text),
+      let endByte = utf8Offset(of: normalizedRange.upperBound, in: text)
     else {
       hasValidByteRanges = false
       return false

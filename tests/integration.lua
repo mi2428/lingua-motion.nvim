@@ -98,6 +98,12 @@ assert_cursor_position(0, 3)
 reset_buffer({ "日本語です。", "", "ASCII, 日本語" }, 0, 15)
 lingua_motion.motion("w")
 assert_cursor_position(2, 0)
+local emoji_line = "東京→Shanghai→New York✈️ 世界一周旅行を计划中です🌏"
+local plane_column = assert(emoji_line:find("✈", 1, true)) - 1
+local world_column = assert(emoji_line:find("世界", 1, true)) - 1
+reset_buffer({ emoji_line }, 0, plane_column)
+lingua_motion.motion("w")
+assert_cursor_position(0, world_column)
 
 reset_buffer({ "One sentence. Next sentence!", "続く。" }, 0, 0)
 lingua_motion.motion(")")

@@ -66,6 +66,20 @@ def run_protocol_test() -> None:
                 ),
                 source_text,
             )
+
+        emoji_text = "東京→Shanghai→New York✈️ 世界一周旅行を计划中です🌏"
+        emoji_response = send_json_request(
+            process,
+            RequestPayload(id=200, text=emoji_text, unit="word", language="auto"),
+        )
+        assert_success_token_spans(emoji_response, emoji_text)
+        split_emoji_byte = len("東京→Shanghai→New York✈".encode())
+        if any(
+            split_emoji_byte in (token["start"], token["end"])
+            for token in emoji_response["tokens"]
+        ):
+            raise_test_failure(f"token boundary split an emoji: {emoji_response}")
+
         invalid_response = send_json_request(
             process,
             RequestPayload(id=999, text="abc", unit="unknown", language="auto"),
