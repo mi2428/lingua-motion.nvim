@@ -67,9 +67,17 @@ end
 
 local maps_before_setup = capture_unmodified_mode_mappings()
 local autocmds_before_setup = capture_autocmd_snapshot()
+local restored_mapping_calls = 0
+vim.keymap.set("n", "w", function()
+	restored_mapping_calls = restored_mapping_calls + 1
+end, { desc = "preexisting user mapping" })
 lingua_motion.setup({ helper_path = helper_path, timeout_ms = 500 })
 assert(vim.deep_equal(maps_before_setup, capture_unmodified_mode_mappings()), "setup changed i/c/t maps")
 assert(vim.deep_equal(autocmds_before_setup, capture_autocmd_snapshot()), "setup changed autocmds")
+lingua_motion.setup({ helper_path = helper_path, timeout_ms = 500, mappings = false })
+feed_keys("w")
+assert(restored_mapping_calls == 1, "setup did not restore a preexisting user mapping")
+lingua_motion.setup({ helper_path = helper_path, timeout_ms = 500 })
 
 local health_errors = {}
 local original_health_start, original_health_ok, original_health_error =

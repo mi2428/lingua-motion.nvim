@@ -56,6 +56,7 @@ local token_cache_limit = 128
 ---@field mode string
 ---@field lhs string
 ---@field callback function
+---@field previous table
 ---@type InstalledMapping[]
 local installed_mappings = {}
 
@@ -536,7 +537,11 @@ local function remove_installed_mappings()
 	for _, mapping in ipairs(installed_mappings) do
 		local existing_mapping = vim.fn.maparg(mapping.lhs, mapping.mode, false, true)
 		if existing_mapping.callback == mapping.callback then
-			pcall(vim.keymap.del, mapping.mode, mapping.lhs)
+			if vim.tbl_isempty(mapping.previous) then
+				pcall(vim.keymap.del, mapping.mode, mapping.lhs)
+			else
+				vim.fn.mapset(mapping.mode, false, mapping.previous)
+			end
 		end
 	end
 	installed_mappings = {}
@@ -577,6 +582,7 @@ local function install_mappings()
 						end
 					end
 					for _, mapping_mode in ipairs({ "n", "x", "o" }) do
+						local previous_mapping = vim.fn.maparg(left_hand_side, mapping_mode, false, true)
 						vim.keymap.set(mapping_mode, left_hand_side, callback, {
 							noremap = true,
 							silent = true,
@@ -586,6 +592,7 @@ local function install_mappings()
 							mode = mapping_mode,
 							lhs = left_hand_side,
 							callback = callback,
+							previous = previous_mapping,
 						}
 					end
 				end
