@@ -1,21 +1,25 @@
 # lingua-motion.nvim
 
-Multilingual natural-language motions and text objects for Neovim, powered by Apple NLTokenizer. Japanese-first, macOS-only.
+Multilingual natural-language motions and text objects for Neovim, powered by [Apple NLTokenizer](https://developer.apple.com/documentation/naturallanguage/nltokenizer).
+
+![lingua-motion.nvim demo](https://raw.githubusercontent.com/mi2428/lingua-motion.nvim/demo/demo.gif)
 
 ## Features
 
 - Natural-language `w`, `e`, `b`, `ge`, `(`, and `)` motions.
 - `iw`, `aw`, `is`, and `as` text objects.
-- Japanese, English, Chinese, and mixed-text tokenization.
+- Japanese, Korean, English, Chinese, and mixed-text tokenization.
 - Counts and Normal, Visual, and Operator-pending modes, including `diw`, `ciw`, `dis`, and `yas`.
 - Native Neovim fallback when the helper is unavailable or returns an invalid response.
 
-## Requirements
+## Getting Started
 
-- macOS; Apple `NaturalLanguage` is the tokenizer backend.
+### Requirements
+
+- macOS; Apple NaturalLanguage is the tokenizer backend.
 - Swift 6 when building the helper directly.
 
-## Install
+### Installation
 
 > [!WARNING]
 > The default configuration replaces Neovim's `w`, `e`, `b`, `ge`, `(`, `)`, `iw`, `aw`, `is`, and `as` mappings in Normal, Visual, and Operator-pending modes. Set `mappings = false` or configure custom lhs values to preserve them.
@@ -54,7 +58,19 @@ On Apple Silicon, Nix can install the helper directly on `PATH`:
 nix profile install github:mi2428/lingua-motion.nvim#lingua-motion-helper
 ```
 
+### Health Check
+
+After `setup()` runs, check the platform, configured helper path, and a real tokenization request with:
+
+```vim
+:checkhealth lingua-motion
+```
+
+Helper timeout, crash, and invalid-response failures use non-recursive native motions or text objects and retry the helper on a later request.
+
 ## Usage
+
+### Default Mappings
 
 The default mappings keep Neovim's lhs values while changing their boundaries to Apple NaturalLanguage tokens:
 
@@ -71,7 +87,7 @@ Counts work in Normal, Visual, and Operator-pending modes. Consecutive Japanese 
 
 See `:help lingua-motion` for the complete reference.
 
-## Configuration
+### Configuration
 
 The defaults are:
 
@@ -106,23 +122,15 @@ require("lingua_motion").setup({
 
 Only `n`, `x`, and `o` mappings are installed. Loading the plugin itself has no helper, keymap, autocmd, or IME side effects; `setup()` must be called explicitly. Insert, Command-line, and Terminal mappings, autocmds, input sources, and IME state are not touched.
 
-## Health Check
+## Internals
 
-After `setup()` runs, check the platform, configured helper path, and a real tokenization request with:
-
-```vim
-:checkhealth lingua-motion
-```
-
-Helper timeout, crash, and invalid-response failures use non-recursive native motions or text objects and retry the helper on a later request.
-
-## Scope and Limitations
+### Scope and Limitations
 
 The Swift helper uses Apple `NaturalLanguage` directly. Word tokens retain UTF-8 byte spans and numeric, symbolic, and emoji attributes. Sentence tokens preserve Apple's sentence boundaries without punctuation-specific splitting. Cache entries are bounded by `unit + language + text`.
 
 The plugin does not provide a Linux or Windows backend, paragraph/document motions, part-of-speech tagging, embeddings, or IME integration.
 
-## Protocol
+### Helper Protocol
 
 `lingua-motion-helper` is one long-lived JSONL process. stdout is protocol-only; diagnostics go to stderr. Each request has an id, text, unit, and language:
 
@@ -140,17 +148,33 @@ Unknown units return an id-matched error. The helper warms both tokenizer units,
 
 ## Development
 
+### Runtime Tests
+
 Run the complete runtime suite, including the RSS soak:
 
 ```sh
 tests/run.sh
 ```
 
+### Demo Recording
+
+The reproducible recording setup and generated GIF live on the orphan [`demo`](https://github.com/mi2428/lingua-motion.nvim/tree/demo) branch:
+
+```sh
+git switch demo
+make check
+make record
+```
+
+### Static Checks
+
 Run all formatters, linters, strict type checks, and the Swift compiler check:
 
 ```sh
 tests/lint.sh
 ```
+
+### Nix Checks
 
 Run the reproducible Nix checks without the sandbox-incompatible RSS check:
 
