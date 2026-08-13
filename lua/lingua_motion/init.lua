@@ -617,4 +617,9 @@ function module.setup(options)
 	install_mappings()
 end
 
+---@return boolean configured, string helper_path, number timeout_ms, string language
+function module._health_config()
+	return plugin_configured, current_config.helper_path, current_config.timeout_ms, current_config.language
+end
+
 return module

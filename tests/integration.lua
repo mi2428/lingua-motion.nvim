@@ -71,6 +71,20 @@ lingua_motion.setup({ helper_path = helper_path, timeout_ms = 500 })
 assert(vim.deep_equal(maps_before_setup, capture_unmodified_mode_mappings()), "setup changed i/c/t maps")
 assert(vim.deep_equal(autocmds_before_setup, capture_autocmd_snapshot()), "setup changed autocmds")
 
+local health_errors = {}
+local original_health_start, original_health_ok, original_health_error =
+	vim.health.start, vim.health.ok, vim.health.error
+rawset(vim.health, "start", function() end)
+rawset(vim.health, "ok", function() end)
+rawset(vim.health, "error", function(message)
+	health_errors[#health_errors + 1] = message
+end)
+require("lingua-motion.health").check()
+rawset(vim.health, "start", original_health_start)
+rawset(vim.health, "ok", original_health_ok)
+rawset(vim.health, "error", original_health_error)
+assert(#health_errors == 0, "health check failed: " .. table.concat(health_errors, "; "))
+
 local original_buffer_get_lines = vim.api.nvim_buf_get_lines
 local accessed_ranges = {}
 rawset(vim.api, "nvim_buf_get_lines", function(buffer_handle, start_row, end_row, strict_indexing)
