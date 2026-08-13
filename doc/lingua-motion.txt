@@ -1,0 +1,110 @@
+*lingua-motion.txt*  Natural-language motions and text objects for Neovim
+
+==============================================================================
+CONTENTS                                                *lingua-motion-contents*
+
+1. Introduction........................................ |lingua-motion|
+2. Installation........................................ |lingua-motion-install|
+3. Setup............................................... |lingua-motion-setup|
+4. Mappings............................................ |lingua-motion-mappings|
+5. Health check........................................ |lingua-motion-health|
+
+==============================================================================
+INTRODUCTION                                                 *lingua-motion*
+
+lingua-motion.nvim provides Japanese-first multilingual motions and text
+objects backed by Apple NaturalLanguage. It supports Japanese, English,
+Chinese, and mixed text on macOS.
+
+The helper must be installed separately or built in the plugin directory.
+When the helper is unavailable, operations fall back to their native Neovim
+equivalents.
+
+==============================================================================
+INSTALLATION                                          *lingua-motion-install*
+
+macOS is required. Building directly requires Swift 6.
+
+Build the helper from the repository root: >sh
+
+    make lingua-motion-helper
+<
+With lazy.nvim, build it in place and pass its absolute path: >lua
+
+    {
+      "mi2428/lingua-motion.nvim",
+      build = "make lingua-motion-helper",
+      config = function(plugin)
+        require("lingua_motion").setup({
+          helper_path = plugin.dir .. "/lingua-motion-helper",
+        })
+      end,
+    }
+<
+==============================================================================
+SETUP                                                  *lingua-motion-setup*
+
+Call setup() explicitly after installation: >lua
+
+    require("lingua_motion").setup()
+<
+The available options are: >lua
+
+    require("lingua_motion").setup({
+      helper_path = vim.fn.exepath("lingua-motion-helper"),
+      timeout_ms = 200,
+      language = "auto",
+      mappings = true,
+    })
+<
+helper_path ~
+    Path to the executable helper.
+
+timeout_ms ~
+    Maximum wait for one helper response.
+
+language ~
+    "auto" or an NLLanguage raw code such as "ja", "en", or "zh-Hans".
+
+mappings ~
+    true installs the defaults, false installs none, and a table configures
+    individual mapping groups.
+
+==============================================================================
+MAPPINGS                                            *lingua-motion-mappings*
+
+WARNING: The default setup replaces Neovim's w, e, b, ge, (, ), iw, aw, is,
+and as mappings in Normal, Visual, and Operator-pending modes.
+
+                                                        *lingua-motion-w*
+w, e, b, ge       Move between natural-language words, symbols, and emoji.
+iw                Select the current natural-language token.
+aw                Select the token with following or preceding whitespace.
+(, )              Move between Apple sentence starts.
+is                Select one Apple sentence.
+as                Select the sentence with trailing or leading whitespace.
+
+Counts are supported. To preserve the native mappings, use: >lua
+
+    require("lingua_motion").setup({ mappings = false })
+<
+Mapping groups may be customized. Each inner key is the original operation
+and each value is its new lhs; false disables that operation: >lua
+
+    require("lingua_motion").setup({
+      mappings = {
+        word_motions = { w = "gw", e = "ge", b = false, ge = "gE" },
+        word_textobjects = true,
+        sentence_motions = false,
+        sentence_textobjects = true,
+      },
+    })
+<
+==============================================================================
+HEALTH CHECK                                          *lingua-motion-health*
+
+After setup() runs, check macOS, the configured helper, and tokenization: >vim
+
+    :checkhealth lingua-motion
+<
+vim:tw=78:ts=8:noet:ft=help:norl:
