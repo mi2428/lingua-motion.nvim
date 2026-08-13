@@ -126,6 +126,17 @@ local world_column = assert(emoji_line:find("世界", 1, true)) - 1
 reset_buffer({ emoji_line }, 0, plane_column)
 lingua_motion.motion("w")
 assert_cursor_position(0, world_column)
+local korean_line = "아침 햇살을 받으며 조용한 골목을 걷습니다."
+local korean_haze_column = assert(korean_line:find("햇살", 1, true)) - 1
+reset_buffer({ korean_line }, 0, 0)
+lingua_motion.motion("w")
+assert_cursor_position(0, korean_haze_column)
+reset_buffer({ korean_line }, 0, korean_haze_column)
+feed_keys("ciw빛\27")
+assert(
+	vim.api.nvim_buf_get_lines(0, 0, -1, false)[1] == "아침 빛 받으며 조용한 골목을 걷습니다.",
+	"Korean ciw failed"
+)
 
 reset_buffer({ "One sentence. Next sentence!", "続く。" }, 0, 0)
 lingua_motion.motion(")")

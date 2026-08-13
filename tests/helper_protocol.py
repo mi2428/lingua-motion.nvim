@@ -40,6 +40,8 @@ def run_protocol_test() -> None:
             (6, "日本語の文章。", "ja"),
             (7, "中文句子。", "zh-Hans"),
             (8, "warm ASCII", "auto"),
+            (9, "한국어 문장을 자연스럽게 편집합니다.", "auto"),
+            (10, "한국어 문장을 자연스럽게 편집합니다.", "ko"),
         ]
         for request_identifier, source_text, language_code in request_cases:
             assert_success_token_spans(
