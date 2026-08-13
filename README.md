@@ -10,13 +10,53 @@ Published motions are `w`, `e`, `b`, `ge`, `(`, and `)`. Published text objects 
 
 `iw` selects the current natural-language word, symbol, or emoji. `aw` prefers following whitespace, then preceding whitespace; consecutive Japanese tokens remain `iw`-sized. `is` selects one Apple sentence. `as` prefers trailing spaces/newlines, then leading whitespace. Sentence analysis joins only the current blank-line-delimited paragraph and accesses buffer lines lazily.
 
+## Install
+
+macOS and a Swift 6 compiler are required.
+
+With [lazy.nvim](https://github.com/folke/lazy.nvim), the helper is built inside the plugin directory and its exact path is passed to `setup()`:
+
+```lua
+{
+  "mi2428/lingua-motion.nvim",
+  build = "make lingua-motion-helper",
+  config = function(plugin)
+    require("lingua_motion").setup({
+      helper_path = plugin.dir .. "/lingua-motion-helper",
+    })
+  end,
+}
+```
+
+To install the helper on `PATH` instead, run this from the repository root:
+
+```sh
+make lingua-motion-helper
+install -d "$HOME/.local/bin"
+install -m 755 lingua-motion-helper "$HOME/.local/bin/lingua-motion-helper"
+```
+
+Ensure `$HOME/.local/bin` is on `PATH`, install the Lua plugin with your preferred plugin manager, then call `setup()`.
+
+On Apple Silicon, Nix can install the helper directly on `PATH`:
+
+```sh
+nix profile install github:mi2428/lingua-motion.nvim#lingua-motion-helper
+```
+
 ## Setup
 
-Loading the plugin has no helper, keymap, autocmd, or IME side effects. Call `setup()` explicitly:
+Loading the plugin has no helper, keymap, autocmd, or IME side effects. Call `setup()` explicitly. When `lingua-motion-helper` is on `PATH`, no options are required:
+
+```lua
+require("lingua_motion").setup()
+```
+
+The defaults can be overridden as needed:
 
 ```lua
 require("lingua_motion").setup({
-  helper_path = "lingua-motion-helper",
+  helper_path = "/absolute/path/to/lingua-motion-helper",
   timeout_ms = 200,
   language = "auto",
   mappings = true,
@@ -37,23 +77,6 @@ require("lingua_motion").setup({
 ```
 
 Only `n`, `x`, and `o` mappings are installed. `i`, `c`, and `t` maps, autocmds, input sources, and IME state are not touched. Helper timeout/crash/invalid responses use non-recursive native motions or text objects and retry the helper on a later request. Cache entries are bounded by `unit + language + text`.
-
-## Install
-
-Build the resident JSONL helper with Swift:
-
-```sh
-swiftc -swift-version 6 -warnings-as-errors -strict-concurrency=complete -O \
-  -framework Foundation -framework NaturalLanguage \
-  Sources/lingua-motion-helper/main.swift -o lingua-motion-helper
-```
-
-Nix provides the Darwin `aarch64` output:
-
-```sh
-nix build .#lingua-motion-helper
-nix build .#lingua-motion
-```
 
 The plugin is macOS-only because Apple `NaturalLanguage` is the backend. It does not provide a Linux backend, paragraph/document motions, part-of-speech tagging, embeddings, or IME integration.
 
