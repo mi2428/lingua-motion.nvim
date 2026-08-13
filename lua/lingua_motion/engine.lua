@@ -25,6 +25,17 @@
 
 local module = {}
 
+---@param source_text string
+---@param byte_offset integer
+---@return boolean
+local function is_utf8_boundary(source_text, byte_offset)
+	if byte_offset == 0 or byte_offset == #source_text then
+		return true
+	end
+	local byte_value = source_text:byte(byte_offset + 1)
+	return byte_value ~= nil and (byte_value < 128 or byte_value > 191)
+end
+
 ---Validate helper token spans and normalize their protocol shape.
 ---@param candidate_tokens unknown
 ---@param source_text string
@@ -67,6 +78,8 @@ function module.validate_tokens(candidate_tokens, source_text)
 			or start_byte < 0
 			or start_byte >= end_byte
 			or end_byte > source_byte_length
+			or not is_utf8_boundary(source_text, start_byte)
+			or not is_utf8_boundary(source_text, end_byte)
 		then
 			return nil
 		end
