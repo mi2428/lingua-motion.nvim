@@ -13,7 +13,7 @@
           pkgs = import nixpkgs { inherit system; };
           helper = pkgs.stdenv.mkDerivation {
             pname = "lingua-motion-helper";
-            version = "0.9.1";
+            version = "1.0.0";
             src = ./.;
             nativeBuildInputs = [ pkgs.swift ];
             buildPhase = ''
@@ -29,7 +29,7 @@
           };
           vimPlugin = pkgs.stdenvNoCC.mkDerivation {
             pname = "lingua-motion.nvim";
-            version = "0.9.1";
+            version = "1.0.0";
             src = ./.;
             dontBuild = true;
             forceShare = [ "man" "info" ];
@@ -51,7 +51,7 @@
           pkgs = import nixpkgs { inherit system; };
           staticChecks = pkgs.stdenv.mkDerivation {
             pname = "lingua-motion-static-checks";
-            version = "0.9.1";
+            version = "1.0.0";
             src = ./.;
             nativeBuildInputs = [
               pkgs.python3
@@ -75,7 +75,7 @@
           };
           tests = pkgs.stdenv.mkDerivation {
             pname = "lingua-motion-tests";
-            version = "0.9.1";
+            version = "1.0.0";
             src = ./.;
             nativeBuildInputs = [ pkgs.swift pkgs.neovim pkgs.python3 ];
             buildPhase = ''
