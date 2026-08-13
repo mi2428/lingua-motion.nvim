@@ -32,9 +32,11 @@
             version = "0.9.1";
             src = ./.;
             dontBuild = true;
+            forceShare = [ "man" "info" ];
             installPhase = ''
               mkdir -p $out
               cp -R lua $out/
+              cp -R doc $out/
             '';
             passthru.helper = helper;
           };
@@ -84,11 +86,17 @@
             '';
             installPhase = "touch $out";
           };
+          packageContents = pkgs.runCommand "lingua-motion-package-contents" { } ''
+            test -f ${self.packages.${system}.lingua-motion}/lua/lingua_motion/init.lua
+            test -f ${self.packages.${system}.lingua-motion}/doc/lingua-motion.txt
+            touch $out
+          '';
         in {
           "lingua-motion-helper" = self.packages.${system}."lingua-motion-helper";
           lingua-motion = self.packages.${system}.lingua-motion;
           lingua-motion-static-checks = staticChecks;
           lingua-motion-tests = tests;
+          lingua-motion-package-contents = packageContents;
         });
     };
 }
