@@ -17,6 +17,7 @@ Multilingual natural-language motions and text objects for Neovim, powered by [A
 ### Requirements
 
 - macOS; Apple NaturalLanguage is the tokenizer backend.
+- Neovim 0.10 or later.
 - Swift 6 when building the helper directly.
 
 ### Installation

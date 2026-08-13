@@ -13,8 +13,8 @@ CONTENTS                                                *lingua-motion-contents*
 INTRODUCTION                                                 *lingua-motion*
 
 lingua-motion.nvim provides Japanese-first multilingual motions and text
-objects backed by Apple NaturalLanguage. It supports Japanese, English,
-Chinese, and mixed text on macOS.
+objects backed by Apple NaturalLanguage. It supports Japanese, Korean,
+English, Chinese, and mixed text on macOS.
 
 The helper must be installed separately or built in the plugin directory.
 When the helper is unavailable, operations fall back to their native Neovim
@@ -23,7 +23,8 @@ equivalents.
 ==============================================================================
 INSTALLATION                                          *lingua-motion-install*
 
-macOS is required. Building directly requires Swift 6.
+macOS and Neovim 0.10 or later are required. Building directly requires
+Swift 6.
 
 Build the helper from the repository root: >sh
 
