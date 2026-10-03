@@ -295,6 +295,48 @@ assert(
 	"fallback count replay failed: " .. vim.api.nvim_buf_get_lines(0, 0, -1, false)[1]
 )
 
+do
+	local original_jobstart = vim.fn.jobstart
+	local helper_launches = 0
+	local tokens_json = "[]"
+	local fake_helper_script = [[
+import json, sys
+for line in sys.stdin:
+    request = json.loads(line)
+    tokens = json.loads(sys.argv[1]) if request["text"] == "a b" else [{"start": 0, "end": 1}, {"start": 2, "end": 3}]
+    print(json.dumps({"id": request["id"], "tokens": tokens}), flush=True)
+]]
+	rawset(vim.fn, "jobstart", function(command, options)
+		assert(command[1] == helper_path)
+		helper_launches = helper_launches + 1
+		return original_jobstart({ vim.fn.exepath("python3"), "-u", "-c", fake_helper_script, tokens_json }, options)
+	end)
+	for _, malformed_json in ipairs({ "{}", '{"oops":true}', '{"1":{"start":0,"end":1}}' }) do
+		tokens_json = malformed_json
+		lingua_motion.setup({ helper_path = helper_path, timeout_ms = 500, mappings = false })
+		reset_buffer({ "a b" }, 0, 0)
+		lingua_motion.motion("w")
+		assert_cursor_position(0, 2)
+		local launches_after_failure = helper_launches
+		tokens_json = '[{"start":0,"end":1},{"start":1,"end":3}]'
+		reset_buffer({ "a b" }, 0, 0)
+		lingua_motion.motion("w")
+		assert_cursor_position(0, 1)
+		assert(helper_launches == launches_after_failure + 1, "invalid tokens were cached or helper was not retried")
+		reset_buffer({ "a b" }, 0, 0)
+		lingua_motion.motion("w")
+		assert_cursor_position(0, 1)
+		assert(helper_launches == launches_after_failure + 1, "valid tokens were not cached")
+	end
+	tokens_json = '{"oops":true}'
+	lingua_motion.setup({ helper_path = helper_path, timeout_ms = 500, mappings = false })
+	reset_buffer({ "a b", "c d" }, 0, 0)
+	lingua_motion.motion("w")
+	assert_cursor_position(0, 2)
+	lingua_motion.setup({ mappings = false })
+	rawset(vim.fn, "jobstart", original_jobstart)
+end
+
 lingua_motion.setup({ helper_path = helper_path, timeout_ms = 500, mappings = false, language = "ja" })
 reset_buffer({ "日本語。次" }, 0, 0)
 lingua_motion.motion("w")

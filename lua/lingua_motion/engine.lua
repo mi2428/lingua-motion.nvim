@@ -41,7 +41,7 @@ end
 ---@param source_text string
 ---@return TokenSpan[]|nil
 function module.validate_tokens(candidate_tokens, source_text)
-	if type(candidate_tokens) ~= "table" then
+	if type(candidate_tokens) ~= "table" or not vim.islist(candidate_tokens) then
 		return nil
 	end
 	local normalized_spans = {}

@@ -7,6 +7,15 @@ local validated_spans = motion_engine.validate_tokens({
 }, "abc def 😀!")
 assert(validated_spans and #validated_spans == 3)
 assert(validated_spans[2].symbolic and validated_spans[3].emoji)
+assert(vim.deep_equal(motion_engine.validate_tokens(vim.json.decode("[]"), "a"), {}))
+assert(motion_engine.validate_tokens(vim.json.decode('[{"start":0,"end":1}]'), "a"))
+for _, malformed_json in ipairs({ "{}", '{"oops":true}', '{"1":{"start":0,"end":1}}' }) do
+	assert(motion_engine.validate_tokens(vim.json.decode(malformed_json), "a") == nil, malformed_json)
+end
+assert(
+	motion_engine.validate_tokens({ [1] = { start = 0, ["end"] = 1 }, [3] = { start = 2, ["end"] = 3 } }, "a b") == nil
+)
+assert(motion_engine.validate_tokens({ { start = 0, ["end"] = 1 }, extra = true }, "a") == nil)
 -- Deliberately malformed input verifies runtime validation at the JSON boundary.
 local malformed_candidates = vim.json.decode('[{"start":0,"finish":1,"emoji":"yes"}]')
 assert(motion_engine.validate_tokens(malformed_candidates, "a") == nil)
