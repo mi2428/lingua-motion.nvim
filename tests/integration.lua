@@ -108,6 +108,94 @@ assert(vim.deep_equal(autocmds_before_setup, capture_autocmd_snapshot()), "setup
 lingua_motion.setup({ helper_path = helper_path, timeout_ms = 500, mappings = false })
 feed_keys("w")
 assert(restored_mapping_calls == 1, "setup did not restore a preexisting user mapping")
+
+do
+	local mapping_modes = { "n", "x", "o" }
+	local overlapping_configs = {
+		{
+			word_motions = { w = "Q", e = "Q" },
+			word_textobjects = false,
+			sentence_motions = false,
+			sentence_textobjects = false,
+		},
+		{
+			word_motions = { w = "Q" },
+			word_textobjects = { iw = "Q" },
+			sentence_motions = { [")"] = "Q" },
+			sentence_textobjects = { is = "Q" },
+		},
+	}
+	for _, mapping_config in ipairs(overlapping_configs) do
+		local original_mappings = {}
+		local original_callback = function()
+			return ""
+		end
+		for _, mapping_mode in ipairs(mapping_modes) do
+			vim.keymap.set(mapping_mode, "Q", original_callback, {
+				desc = "original user mapping",
+				expr = true,
+				nowait = true,
+				remap = true,
+			})
+			original_mappings[mapping_mode] = vim.fn.maparg("Q", mapping_mode, false, true)
+		end
+		lingua_motion.setup({ mappings = mapping_config })
+		lingua_motion.setup({ mappings = false })
+		for _, mapping_mode in ipairs(mapping_modes) do
+			assert(
+				vim.deep_equal(vim.fn.maparg("Q", mapping_mode, false, true), original_mappings[mapping_mode]),
+				"overlapping mappings did not restore original callback/metadata: " .. mapping_mode
+			)
+		end
+
+		lingua_motion.setup({ mappings = mapping_config })
+		lingua_motion.setup({
+			mappings = {
+				word_motions = { w = "R" },
+				word_textobjects = false,
+				sentence_motions = false,
+				sentence_textobjects = false,
+			},
+		})
+		lingua_motion.setup({ mappings = false })
+		for _, mapping_mode in ipairs(mapping_modes) do
+			assert(
+				vim.deep_equal(vim.fn.maparg("Q", mapping_mode, false, true), original_mappings[mapping_mode]),
+				"reconfiguration left an overlapping plugin mapping: " .. mapping_mode
+			)
+			assert(vim.tbl_isempty(vim.fn.maparg("R", mapping_mode, false, true)), "new mapping was not removed")
+		end
+
+		lingua_motion.setup({ mappings = mapping_config })
+		local newer_mappings = {}
+		for _, mapping_mode in ipairs(mapping_modes) do
+			vim.keymap.set(mapping_mode, "Q", function() end, { desc = "newer user mapping", silent = true })
+			newer_mappings[mapping_mode] = vim.fn.maparg("Q", mapping_mode, false, true)
+		end
+		lingua_motion.setup({ mappings = false })
+		for _, mapping_mode in ipairs(mapping_modes) do
+			assert(
+				vim.deep_equal(vim.fn.maparg("Q", mapping_mode, false, true), newer_mappings[mapping_mode]),
+				"cleanup overwrote a newer user mapping: " .. mapping_mode
+			)
+			vim.keymap.del(mapping_mode, "Q")
+		end
+		lingua_motion.setup({ mappings = mapping_config })
+		lingua_motion.setup({ mappings = false })
+		for _, mapping_mode in ipairs(mapping_modes) do
+			assert(
+				vim.tbl_isempty(vim.fn.maparg("Q", mapping_mode, false, true)),
+				"plugin callback remained without original"
+			)
+		end
+	end
+	assert(
+		vim.deep_equal(maps_before_setup, capture_unmodified_mode_mappings()),
+		"overlapping setup changed i/c/t maps"
+	)
+	assert(vim.deep_equal(autocmds_before_setup, capture_autocmd_snapshot()), "overlapping setup changed autocmds")
+end
+
 lingua_motion.setup({ helper_path = helper_path, timeout_ms = 500 })
 
 local health_errors = {}

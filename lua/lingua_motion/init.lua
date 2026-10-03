@@ -524,7 +524,8 @@ function module.textobject(textobject_key)
 end
 
 local function remove_installed_mappings()
-	for _, mapping in ipairs(installed_mappings) do
+	for mapping_index = #installed_mappings, 1, -1 do
+		local mapping = installed_mappings[mapping_index]
 		local existing_mapping = vim.fn.maparg(mapping.lhs, mapping.mode, false, true)
 		if existing_mapping.callback == mapping.callback then
 			if vim.tbl_isempty(mapping.previous) then
