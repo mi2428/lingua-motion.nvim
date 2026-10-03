@@ -7,11 +7,42 @@ local function reset_buffer(source_lines, row, column)
 	vim.cmd("normal! \27")
 end
 
-local function feed_keys(input_keys)
-	vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes(input_keys, true, false, true), "xt", false)
+local function feed_keys(input_keys, native)
+	vim.api.nvim_feedkeys(
+		vim.api.nvim_replace_termcodes(input_keys, true, false, true),
+		native and "nxt" or "xt",
+		false
+	)
 	vim.wait(300, function()
 		return false
 	end, 1)
+end
+
+local function assert_native_keys(source_lines, row, column, native_keys, mapped_keys)
+	local function capture_result(input_keys, native)
+		reset_buffer(source_lines, row, column)
+		vim.fn.setreg('"', "")
+		vim.fn.setreg("z", "")
+		feed_keys(input_keys, native)
+		return {
+			lines = vim.api.nvim_buf_get_lines(0, 0, -1, false),
+			cursor = vim.api.nvim_win_get_cursor(0),
+			mode = vim.fn.mode(1),
+			unnamed = vim.fn.getreg('"'),
+			register = vim.fn.getreg("z"),
+			register_type = vim.fn.getregtype("z"),
+		}
+	end
+	local expected = capture_result(native_keys, true)
+	local actual = capture_result(mapped_keys or native_keys, false)
+	assert(
+		vim.deep_equal(expected, actual),
+		("native mismatch for %s: expected %s, got %s"):format(
+			mapped_keys or native_keys,
+			vim.inspect(expected),
+			vim.inspect(actual)
+		)
+	)
 end
 
 local function get_cursor_position()
@@ -294,6 +325,27 @@ assert(
 	vim.api.nvim_buf_get_lines(0, 0, -1, false)[1] == "b c",
 	"fallback count replay failed: " .. vim.api.nvim_buf_get_lines(0, 0, -1, false)[1]
 )
+
+for _, visual_keys in ipairs({ "v", "V", "\22" }) do
+	for _, object_keys in ipairs({ "iw", "aw", "is", "as" }) do
+		assert_native_keys(
+			{ "a b c d e f.", "Next sentence." },
+			0,
+			0,
+			(visual_keys == "\22" and "v" or visual_keys) .. "2" .. object_keys .. '"zy',
+			visual_keys .. "2" .. object_keys .. '"zy'
+		)
+	end
+end
+for _, object_keys in ipairs({ "iw", "aw", "is", "as" }) do
+	assert_native_keys(
+		{ "a b c d e f.", "Next sentence." },
+		0,
+		0,
+		"v2" .. object_keys .. '"zy',
+		"2" .. object_keys .. '"zy'
+	)
+end
 
 do
 	local original_jobstart = vim.fn.jobstart

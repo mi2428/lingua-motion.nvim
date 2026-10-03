@@ -261,7 +261,7 @@ local function execute_native_textobject(textobject_keys)
 	if current_mode == "n" then
 		vim.cmd("normal! v")
 	end
-	vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes(textobject_keys, true, false, true), "nx", false)
+	vim.cmd(("normal! %d%s"):format(motion_count, textobject_keys))
 end
 
 local function make_line_accessor(buffer_handle)
