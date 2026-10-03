@@ -357,10 +357,20 @@ local function cursor_from_range(line_start_bytes, paragraph_text, end_byte)
 end
 
 local function select_visual_range(start_row, start_column, end_row, end_column, select_one_more)
-	local previous_virtualedit = vim.wo.virtualedit
-	local has_onemore = ("," .. previous_virtualedit .. ","):find(",onemore,", 1, true) ~= nil
+	local exclusive_selection = vim.o.selection == "exclusive"
+	if exclusive_selection then
+		if select_one_more then
+			-- The included newline ends at the next row for an exclusive selection.
+			end_row, end_column, select_one_more = end_row + 1, 0, false
+		else
+			select_one_more = true
+		end
+	end
+	local previous_virtualedit = vim.api.nvim_get_option_value("virtualedit", { scope = "local" })
+	local active_virtualedit = vim.wo.virtualedit
+	local has_onemore = ("," .. active_virtualedit .. ","):find(",onemore,", 1, true) ~= nil
 	if select_one_more and not has_onemore then
-		vim.wo.virtualedit = previous_virtualedit == "" and "onemore" or previous_virtualedit .. ",onemore"
+		vim.wo.virtualedit = active_virtualedit == "" and "onemore" or active_virtualedit .. ",onemore"
 	end
 	local current_mode = vim.fn.mode(1)
 	local is_visual_mode = current_mode:sub(1, 1) == "v" or current_mode == "V" or current_mode == "\22"
@@ -374,6 +384,9 @@ local function select_visual_range(start_row, start_column, end_row, end_column,
 	end
 	vim.cmd("normal! v")
 	set_window_cursor(end_row, end_column)
+	if exclusive_selection and select_one_more then
+		vim.cmd("normal! l")
+	end
 	if select_one_more then
 		vim.wo.virtualedit = previous_virtualedit
 	end

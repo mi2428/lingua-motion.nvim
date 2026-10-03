@@ -401,6 +401,109 @@ for _, input_keys in ipairs({ "dw", "d2w", '"zyw', "w", "vwy" }) do
 	assert_native_keys({ "a bee chocolate fancy" }, 0, 0, input_keys)
 end
 
+do
+	local previous_selection = vim.o.selection
+	local saved_global_virtualedit = vim.go.virtualedit
+	local saved_local_virtualedit = vim.api.nvim_get_option_value("virtualedit", { scope = "local" })
+	lingua_motion.setup({ helper_path = helper_path, timeout_ms = 2000 })
+	local selection_cases = {
+		{ "iw", { "One. Two. Three." }, "One" },
+		{ "aw", { "One Two." }, "One " },
+		{ "is", { "One. Two. Three." }, "One." },
+		{ "as", { "One. Two. Three." }, "One. " },
+		{ "iw", { "a" }, "a" },
+		{ "iw", { "日本語。次" }, "日本" },
+		{ "iw", { "Café" }, "Café" },
+		{ "iw", { "✈️" }, "✈️" },
+		{ "iw", { "👩🏽‍💻" }, "👩🏽‍💻" },
+		{ "aw", { "One a" }, " a", 4 },
+		{ "is", { "猫。" }, "猫。" },
+		{ "as", { "One.", "Next." }, "One.\n" },
+		{ "as", { "One.", "  Next." }, "One.\n  " },
+		{ "2as", { "One.", "Next." }, "One.\nNext." },
+		{ "2is", { "日本語。", "続く。" }, "日本語。\n続く。" },
+	}
+	for _, selection in ipairs({ "exclusive", "inclusive" }) do
+		vim.o.selection = selection
+		vim.go.virtualedit = "all"
+		vim.wo.virtualedit = "block"
+		reset_buffer({ "日本語。次" }, 0, 0)
+		vim.cmd('normal! "zyiw')
+		assert(vim.fn.getreg("z") == "日本語", "native control did not bypass the helper")
+		for _, case in ipairs(selection_cases) do
+			local object, lines, expected_text, column = case[1], case[2], case[3], case[4] or 0
+			for _, keys in ipairs({
+				object .. '"zy',
+				"v" .. object .. '"zy',
+				"V" .. object .. '"zy',
+				"\22" .. object .. '"zy',
+				'"zy' .. object,
+			}) do
+				reset_buffer(lines, 0, column)
+				feed_keys(keys)
+				assert(
+					vim.fn.getreg("z") == expected_text and vim.fn.getregtype("z") == "v",
+					selection .. " " .. keys .. " selected " .. vim.inspect(vim.fn.getreg("z"))
+				)
+				assert(vim.o.selection == selection, "textobject changed selection")
+				assert(vim.go.virtualedit == "all" and vim.wo.virtualedit == "block", "textobject changed virtualedit")
+			end
+		end
+		for _, object in ipairs({ "iw", "aw", "is", "as" }) do
+			local source = object == "aw" and "One Two. Three." or "One. Two. Three."
+			local remaining = ({ iw = ". Two. Three.", aw = "Two. Three.", is = " Two. Three.", as = "Two. Three." })[object]
+			for _, operator in ipairs({ "d", "c" }) do
+				reset_buffer({ source }, 0, 0)
+				feed_keys(operator .. object .. (operator == "c" and "X\27" or ""))
+				assert(
+					vim.api.nvim_buf_get_lines(0, 0, -1, false)[1] == (operator == "c" and "X" or "") .. remaining,
+					selection .. " " .. operator .. object .. " truncated the edit"
+				)
+			end
+		end
+		for _, operator in ipairs({ "d", "c" }) do
+			reset_buffer({ "One.", "Next." }, 0, 0)
+			feed_keys(operator .. "as" .. (operator == "c" and "X\27" or ""))
+			assert(
+				vim.deep_equal(
+					vim.api.nvim_buf_get_lines(0, 0, -1, false),
+					{ (operator == "c" and "X" or "") .. "Next." }
+				),
+				selection .. " multiline " .. operator .. "as truncated the edit"
+			)
+		end
+		local virtualedit_cases = { { "", "" }, { "", "block" }, { "", "onemore" }, { "onemore", "" } }
+		if selection == "exclusive" then
+			vim.list_extend(virtualedit_cases, { { "all", "" }, { "all", "all" } })
+		end
+		for _, options in ipairs(virtualedit_cases) do
+			vim.go.virtualedit = options[1]
+			vim.wo.virtualedit = options[2]
+			for _, case in ipairs({ selection_cases[5], selection_cases[9], selection_cases[12] }) do
+				reset_buffer(case[2], 0, 0)
+				feed_keys(case[1] .. '"zy')
+				assert(
+					vim.fn.getreg("z") == case[3],
+					selection
+						.. " virtualedit="
+						.. vim.inspect(options)
+						.. " selected "
+						.. vim.inspect(vim.fn.getreg("z"))
+				)
+				assert(vim.go.virtualedit == options[1], "textobject changed global virtualedit")
+				assert(
+					vim.api.nvim_get_option_value("virtualedit", { scope = "local" }) == options[2],
+					"textobject changed local virtualedit"
+				)
+				assert(vim.o.selection == selection, "textobject changed selection")
+			end
+		end
+	end
+	vim.o.selection = previous_selection
+	vim.go.virtualedit = saved_global_virtualedit
+	vim.wo.virtualedit = saved_local_virtualedit
+end
+
 lingua_motion.setup({ helper_path = "/usr/bin/false", timeout_ms = 20, mappings = false })
 reset_buffer({ "a b" }, 0, 0)
 lingua_motion.motion("w")
