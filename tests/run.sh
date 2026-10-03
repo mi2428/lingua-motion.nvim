@@ -6,8 +6,11 @@ repo=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 helper=$(mktemp "${TMPDIR:-/tmp}/lingua-motion-helper.XXXXXX")
 trap 'rm -f "$helper"' EXIT HUP INT TERM
 swift_language_version=${LINGUA_MOTION_SWIFT_VERSION:-6}
+export LINGUA_MOTION_TEST_REPO="$repo"
+runtimepath_cmd='lua vim.opt.runtimepath:prepend(vim.fn.escape(vim.env.LINGUA_MOTION_TEST_REPO, "\\,"))'
 
 python3 "$repo/tests/helper_transport.py"
+python3 "$repo/tests/runner_path.py" "$runtimepath_cmd"
 
 swiftc -swift-version "$swift_language_version" -warnings-as-errors -strict-concurrency=complete -O \
   -framework NaturalLanguage -framework Foundation \
@@ -22,11 +25,11 @@ else
 fi
 
 nvim --headless --clean -u NONE \
-  --cmd "set rtp^=$repo" \
+  --cmd "$runtimepath_cmd" \
   -l "$repo/tests/motion_spec.lua"
 
 LINGUA_MOTION_HELPER="$helper" nvim --headless --clean -u NONE \
-  --cmd "set rtp^=$repo" \
+  --cmd "$runtimepath_cmd" \
   -l "$repo/tests/integration.lua"
 
 for cache_path in \
