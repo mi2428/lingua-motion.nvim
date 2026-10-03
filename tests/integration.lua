@@ -381,6 +381,7 @@ assert(vim.api.nvim_buf_get_lines(0, 0, -1, false)[1] == "Three.", "d2as whitesp
 for _, input_keys in ipairs({ "cwX\27", "c2wX\27", "2c2wX\27", '"zcwX\27', "cwX\27w.", "c2wX\27w." }) do
 	assert_native_keys({ "a bee chocolate fancy gold honey" }, 0, 0, input_keys)
 end
+assert_native_keys({ "one two three", "four five" }, 0, 0, "cVwX\27")
 for _, column in ipairs({ 1, 2, 3, 4 }) do
 	for _, input_keys in ipairs({ "cwX\27", "c2wX\27" }) do
 		assert_native_keys({ "bee   chocolate fancy" }, 0, column, input_keys)

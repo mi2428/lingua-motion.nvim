@@ -461,7 +461,7 @@ function module.motion(motion_key)
 		return request_token_spans("word", get_line(target_row))
 	end
 	local change_word_end
-	if operator_pending and vim.v.operator == "c" and motion_key == "w" then
+	if vim.fn.mode(1) == "no" and vim.v.operator == "c" and motion_key == "w" then
 		local current_spans = get_word_spans(row)
 		if not current_spans then
 			execute_native_motion(motion_key)
