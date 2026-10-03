@@ -351,17 +351,24 @@ do
 	local original_jobstart = vim.fn.jobstart
 	local helper_launches = 0
 	local tokens_json = "[]"
+	local failure_text = ""
 	local fake_helper_script = [[
-import json, sys
+import json, re, sys, time
 for line in sys.stdin:
     request = json.loads(line)
-    tokens = json.loads(sys.argv[1]) if request["text"] == "a b" else [{"start": 0, "end": 1}, {"start": 2, "end": 3}]
+    if sys.argv[2] == "*" or request["text"] == sys.argv[2]:
+        time.sleep(1)
+        continue
+    tokens = json.loads(sys.argv[1]) if request["text"] == "a b" else [{"start": match.start(), "end": match.end()} for match in re.finditer(r"\S+", request["text"])]
     print(json.dumps({"id": request["id"], "tokens": tokens}), flush=True)
 ]]
 	rawset(vim.fn, "jobstart", function(command, options)
 		assert(command[1] == helper_path)
 		helper_launches = helper_launches + 1
-		return original_jobstart({ vim.fn.exepath("python3"), "-u", "-c", fake_helper_script, tokens_json }, options)
+		return original_jobstart(
+			{ vim.fn.exepath("python3"), "-u", "-c", fake_helper_script, tokens_json, failure_text },
+			options
+		)
 	end)
 	for _, malformed_json in ipairs({ "{}", '{"oops":true}', '{"1":{"start":0,"end":1}}' }) do
 		tokens_json = malformed_json
@@ -385,6 +392,64 @@ for line in sys.stdin:
 	reset_buffer({ "a b", "c d" }, 0, 0)
 	lingua_motion.motion("w")
 	assert_cursor_position(0, 2)
+
+	for _, motion_key in ipairs({ "w", "e", "b", "ge" }) do
+		local forward = motion_key == "w" or motion_key == "e"
+		for _, count in ipairs({ 1, 3 }) do
+			for _, fail_immediately in ipairs({ true, false }) do
+				local source_lines = { "aa bb", "cc dd", "ee ff", "gg hh", "ii jj", "kk ll", "mm nn", "oo pp" }
+				local row = forward and 0 or #source_lines - 1
+				local column = forward and 0 or 4
+				if not fail_immediately then
+					source_lines[forward and 2 or #source_lines - 1] = "fail"
+					if count == 1 then
+						column = forward and 4 or 0
+					end
+				end
+				reset_buffer(source_lines, row, column)
+				vim.cmd(("normal! %d%s"):format(count, motion_key))
+				local native_row, native_column = get_cursor_position()
+				failure_text = fail_immediately and "*" or "fail"
+				lingua_motion.setup({
+					helper_path = helper_path,
+					timeout_ms = fail_immediately and 20 or 200,
+				})
+				local launches_before = helper_launches
+				reset_buffer(source_lines, row, column)
+				feed_keys(tostring(count) .. motion_key)
+				assert_cursor_position(native_row, native_column)
+				assert(
+					helper_launches == launches_before + 1,
+					("word scan restarted helper after failure: %s (launches=%d)"):format(
+						motion_key,
+						helper_launches - launches_before
+					)
+				)
+			end
+		end
+	end
+
+	-- A failed cross-line operation must not prevent a later request from recovering.
+	failure_text = "fail"
+	lingua_motion.setup({ helper_path = helper_path, timeout_ms = 500, mappings = false })
+	reset_buffer({ "aa bb", "fail", "cc dd" }, 0, 4)
+	lingua_motion.motion("w")
+	assert_cursor_position(1, 0)
+	local launches_after_failure = helper_launches
+	failure_text = ""
+	tokens_json = '[{"start":0,"end":1},{"start":1,"end":3}]'
+	reset_buffer({ "a b" }, 0, 0)
+	lingua_motion.motion("w")
+	assert_cursor_position(0, 1)
+	assert(helper_launches == launches_after_failure + 1, "later operation did not retry helper")
+	reset_buffer({ "a b" }, 0, 0)
+	lingua_motion.motion("w")
+	assert_cursor_position(0, 1)
+	assert(helper_launches == launches_after_failure + 1, "recovered result was not cached")
+	reset_buffer({ "aa bb", "", "   ", "cc dd" }, 0, 4)
+	lingua_motion.motion("w")
+	assert_cursor_position(3, 0)
+	assert(helper_launches == launches_after_failure + 1, "empty result or cache hit restarted helper")
 	lingua_motion.setup({ mappings = false })
 	rawset(vim.fn, "jobstart", original_jobstart)
 end

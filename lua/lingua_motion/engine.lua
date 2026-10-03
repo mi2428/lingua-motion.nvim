@@ -21,7 +21,7 @@
 ---@field emoji boolean Whether the token is an emoji.
 
 ---@alias LineAccessor fun(row: integer): string
----@alias SpanProvider fun(row: integer): TokenBoundary[]
+---@alias SpanProvider fun(row: integer): TokenBoundary[]|nil
 
 local module = {}
 
@@ -169,9 +169,12 @@ end
 ---@param cursor_byte integer
 ---@param motion_key MotionKey
 ---@param spans_for SpanProvider
----@return integer row, integer cursor_byte
+---@return integer|nil row, integer|nil cursor_byte
 function module.move_once(line_count, line_for, row, cursor_byte, motion_key, spans_for)
 	local current_spans = spans_for(row)
+	if not current_spans then
+		return nil
+	end
 	if motion_key == "w" then
 		local next_token_index = find_next_token_index(current_spans, cursor_byte)
 		if next_token_index then
@@ -179,6 +182,9 @@ function module.move_once(line_count, line_for, row, cursor_byte, motion_key, sp
 		end
 		for next_row = row + 1, line_count - 1 do
 			local next_line_spans = spans_for(next_row)
+			if not next_line_spans then
+				return nil
+			end
 			if #next_line_spans > 0 then
 				return next_row, next_line_spans[1].start
 			end
@@ -199,6 +205,9 @@ function module.move_once(line_count, line_for, row, cursor_byte, motion_key, sp
 		end
 		for next_row = row + 1, line_count - 1 do
 			local next_line_spans = spans_for(next_row)
+			if not next_line_spans then
+				return nil
+			end
 			if #next_line_spans > 0 then
 				return next_row, module.last_char_start(line_for(next_row), next_line_spans[1].finish)
 			end
@@ -214,6 +223,9 @@ function module.move_once(line_count, line_for, row, cursor_byte, motion_key, sp
 		end
 		for previous_row = row - 1, 0, -1 do
 			local previous_line_spans = spans_for(previous_row)
+			if not previous_line_spans then
+				return nil
+			end
 			if #previous_line_spans > 0 then
 				return previous_row, previous_line_spans[#previous_line_spans].start
 			end
@@ -225,6 +237,9 @@ function module.move_once(line_count, line_for, row, cursor_byte, motion_key, sp
 		end
 		for previous_row = row - 1, 0, -1 do
 			local previous_line_spans = spans_for(previous_row)
+			if not previous_line_spans then
+				return nil
+			end
 			if #previous_line_spans > 0 then
 				local previous_token = previous_line_spans[#previous_line_spans]
 				return previous_row, module.last_char_start(line_for(previous_row), previous_token.finish)
@@ -242,11 +257,14 @@ end
 ---@param motion_key MotionKey
 ---@param spans_for SpanProvider
 ---@param repetition_count? integer
----@return integer row, integer cursor_byte
+---@return integer|nil row, integer|nil cursor_byte
 function module.move(line_count, line_for, row, cursor_byte, motion_key, spans_for, repetition_count)
 	for _ = 1, repetition_count or 1 do
 		local next_row, next_cursor_byte =
 			module.move_once(line_count, line_for, row, cursor_byte, motion_key, spans_for)
+		if not next_row or not next_cursor_byte then
+			return nil
+		end
 		if next_row == row and next_cursor_byte == cursor_byte then
 			break
 		end

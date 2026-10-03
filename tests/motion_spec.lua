@@ -83,6 +83,37 @@ assert_motion_position(2, 0, "b", 0, 15)
 assert_motion_position(2, 0, "ge", 0, 15)
 assert_motion_position(0, 0, "w", 0, 15, 2)
 
+for _, motion_key in ipairs({ "w", "e", "b", "ge" }) do
+	local forward = motion_key == "w" or motion_key == "e"
+	for _, count in ipairs({ 1, 4 }) do
+		for _, fail_immediately in ipairs({ true, false }) do
+			local provider_failed = false
+			local provider_calls = 0
+			local row, column = motion_engine.move(
+				#source_lines,
+				function(line_index)
+					return source_lines[line_index + 1]
+				end,
+				forward and 0 or 2,
+				count == 1 and (forward and 15 or 0) or (forward and 0 or 7),
+				motion_key,
+				function(line_index)
+					assert(not provider_failed, "scan called provider after failure")
+					provider_calls = provider_calls + 1
+					if fail_immediately or line_index == 1 then
+						provider_failed = true
+						return nil
+					end
+					return token_spans_by_line[line_index + 1]
+				end,
+				count
+			)
+			assert(provider_failed and row == nil and column == nil, "motion did not propagate provider failure")
+			assert(not fail_immediately or provider_calls == 1, "initial failure scanned remaining lines")
+		end
+	end
+end
+
 local word_token_spans = {
 	{ start = 0, finish = 1 },
 	{ start = 2, finish = 3 },

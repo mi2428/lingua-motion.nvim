@@ -444,14 +444,8 @@ function module.motion(motion_key)
 
 	local line_count = vim.api.nvim_buf_line_count(buffer_handle)
 	local get_line = make_line_accessor(buffer_handle)
-	local helper_unavailable = false
 	local function get_word_spans(target_row)
-		local token_spans = request_token_spans("word", get_line(target_row))
-		if not token_spans then
-			helper_unavailable = true
-			return {}
-		end
-		return token_spans
+		return request_token_spans("word", get_line(target_row))
 	end
 	local target_row, target_column = motion_engine.move(
 		line_count,
@@ -462,11 +456,7 @@ function module.motion(motion_key)
 		get_word_spans,
 		motion_count
 	)
-	if helper_unavailable then
-		execute_native_motion(motion_key)
-		return
-	end
-	if target_row == row and target_column == cursor_byte then
+	if not target_row or not target_column or (target_row == row and target_column == cursor_byte) then
 		execute_native_motion(motion_key)
 		return
 	end
