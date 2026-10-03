@@ -378,6 +378,29 @@ reset_buffer({ "One. Two. Three." }, 0, 0)
 feed_keys("d2as")
 assert(vim.api.nvim_buf_get_lines(0, 0, -1, false)[1] == "Three.", "d2as whitespace failed")
 
+for _, input_keys in ipairs({ "cwX\27", "c2wX\27", "2c2wX\27", '"zcwX\27', "cwX\27w.", "c2wX\27w." }) do
+	assert_native_keys({ "a bee chocolate fancy gold honey" }, 0, 0, input_keys)
+end
+for _, column in ipairs({ 1, 2, 3, 4 }) do
+	for _, input_keys in ipairs({ "cwX\27", "c2wX\27" }) do
+		assert_native_keys({ "bee   chocolate fancy" }, 0, column, input_keys)
+	end
+end
+for _, input_keys in ipairs({ "cwX\27", "c2wX\27", "c3wX\27" }) do
+	assert_native_keys({ "one", "two three four" }, 0, 0, input_keys)
+	assert_native_keys({ "one", "two three four" }, 0, 2, input_keys)
+end
+for _, input_keys in ipairs({ "cwX\27", "c2wX\27", "2c2wX\27" }) do
+	assert_native_keys({ "日本 語 次 の 文" }, 0, 0, input_keys)
+	assert_native_keys({ "아침 햇살을 받으며 조용한 골목을 걷습니다" }, 0, 0, input_keys)
+end
+reset_buffer({ "日本語。次" }, 0, 0)
+feed_keys("cwX\27")
+assert(vim.api.nvim_buf_get_lines(0, 0, -1, false)[1] == "X語。次", "cw lost natural-language boundaries")
+for _, input_keys in ipairs({ "dw", "d2w", '"zyw', "w", "vwy" }) do
+	assert_native_keys({ "a bee chocolate fancy" }, 0, 0, input_keys)
+end
+
 lingua_motion.setup({ helper_path = "/usr/bin/false", timeout_ms = 20, mappings = false })
 reset_buffer({ "a b" }, 0, 0)
 lingua_motion.motion("w")
@@ -387,6 +410,11 @@ feed_keys("dw")
 assert(vim.api.nvim_buf_get_lines(0, 0, -1, false)[1] == "b", "native fallback failed")
 reset_buffer({ "a b" }, 0, 0)
 lingua_motion.setup({ helper_path = "/usr/bin/false", timeout_ms = 20, mappings = true })
+-- Failed-helper edit boundaries are tracked separately; a nil provider must not throw.
+reset_buffer({ "a b" }, 0, 0)
+vim.v.errmsg = ""
+feed_keys("cwX\27")
+assert(vim.v.errmsg == "", "change-word helper failure raised an error: " .. vim.v.errmsg)
 reset_buffer({ "a b" }, 0, 0)
 feed_keys("diw")
 assert(

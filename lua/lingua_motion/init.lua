@@ -447,20 +447,36 @@ function module.motion(motion_key)
 	local function get_word_spans(target_row)
 		return request_token_spans("word", get_line(target_row))
 	end
+	local change_word_end
+	if operator_pending and vim.v.operator == "c" and motion_key == "w" then
+		local current_spans = get_word_spans(row)
+		if not current_spans then
+			execute_native_motion(motion_key)
+			return
+		end
+		local token_index = motion_engine.containing(current_spans, cursor_byte)
+		if token_index then
+			change_word_end = motion_engine.last_char_start(get_line(row), current_spans[token_index].finish)
+		end
+	end
 	local target_row, target_column = motion_engine.move(
 		line_count,
 		get_line,
 		row,
-		cursor_byte,
-		motion_key --[[@as MotionKey]],
+		change_word_end or cursor_byte,
+		change_word_end and "e" or motion_key --[[@as MotionKey]],
 		get_word_spans,
-		motion_count
+		change_word_end and motion_count - 1 or motion_count
 	)
-	if not target_row or not target_column or (target_row == row and target_column == cursor_byte) then
+	if
+		not target_row
+		or not target_column
+		or (target_row == row and target_column == cursor_byte and not change_word_end)
+	then
 		execute_native_motion(motion_key)
 		return
 	end
-	if operator_pending and (motion_key == "e" or motion_key == "ge") then
+	if operator_pending and (motion_key == "e" or motion_key == "ge" or change_word_end) then
 		vim.cmd("normal! v")
 	end
 	set_window_cursor(target_row, target_column)
