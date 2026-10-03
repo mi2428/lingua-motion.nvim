@@ -7,6 +7,8 @@ helper=$(mktemp "${TMPDIR:-/tmp}/lingua-motion-helper.XXXXXX")
 trap 'rm -f "$helper"' EXIT HUP INT TERM
 swift_language_version=${LINGUA_MOTION_SWIFT_VERSION:-6}
 
+python3 "$repo/tests/helper_transport.py"
+
 swiftc -swift-version "$swift_language_version" -warnings-as-errors -strict-concurrency=complete -O \
   -framework NaturalLanguage -framework Foundation \
   "$repo/Sources/lingua-motion-helper/main.swift" -o "$helper"

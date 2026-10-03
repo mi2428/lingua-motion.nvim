@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import json
+import os
 import select
 import subprocess
+import time
 from typing import IO, NoReturn, TypedDict, cast
 
 
@@ -145,13 +147,23 @@ def send_json_request(
     request_line = json.dumps(request, ensure_ascii=False)
     input_stream.write(request_line + "\n")
     input_stream.flush()
-    ready_streams, _, _ = select.select([output_stream], [], [], timeout_seconds)
-    if not ready_streams:
-        raise_test_failure(f"helper response timeout for request {request['id']}")
-    response_line = output_stream.readline()
-    if not response_line:
-        raise_test_failure(f"helper exited before response: {process.poll()}")
-    response = decode_helper_response(response_line)
+    # Read only the descriptor: buffered text reads can block past readiness.
+    output_descriptor = output_stream.fileno()
+    os.set_blocking(output_descriptor, False)
+    deadline = time.monotonic() + timeout_seconds
+    response_bytes = bytearray()
+    while b"\n" not in response_bytes:
+        remaining_seconds = deadline - time.monotonic()
+        if (
+            remaining_seconds <= 0
+            or not select.select([output_descriptor], [], [], remaining_seconds)[0]
+        ):
+            raise_test_failure(f"helper response timeout for request {request['id']}")
+        chunk = os.read(output_descriptor, 4096)
+        if not chunk:
+            raise_test_failure(f"helper exited before response: {process.poll()}")
+        response_bytes.extend(chunk)
+    response = decode_helper_response(response_bytes.decode("utf-8"))
     if response["id"] != request["id"]:
         raise_test_failure(
             f"response id mismatch: expected {request['id']}, got {response['id']}"
