@@ -32,6 +32,7 @@
             version = "1.0.0";
             src = ./.;
             dontBuild = true;
+            nativeBuildInputs = [ pkgs.vimUtils.vimGenDocHook ];
             forceShare = [ "man" "info" ];
             installPhase = ''
               mkdir -p $out
@@ -86,9 +87,10 @@
             '';
             installPhase = "touch $out";
           };
-          packageContents = pkgs.runCommand "lingua-motion-package-contents" { } ''
-            test -f ${self.packages.${system}.lingua-motion}/lua/lingua_motion/init.lua
-            test -f ${self.packages.${system}.lingua-motion}/doc/lingua-motion.txt
+          packageContents = pkgs.runCommand "lingua-motion-package-contents" {
+            nativeBuildInputs = [ pkgs.neovim ];
+          } ''
+            ${pkgs.runtimeShell} ${./tests/package_help.sh} ${self.packages.${system}.lingua-motion}
             touch $out
           '';
         in {
